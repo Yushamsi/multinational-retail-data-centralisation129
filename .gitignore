@@ -1,3 +1,8 @@
 db_creds.yaml
 my_sales_db.yaml
+
+# Byte-compiled / optimized / DLL files
 __pycache__/
+*.py[cod]
+*$py.class
+*.$cpython

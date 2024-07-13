@@ -3,6 +3,8 @@ import database_utils
 import pandas as pd
 import tabula
 import requests
+import boto3
+from botocore.exceptions import NoCredentialsError, ClientError
 
 table_name = 'legacy_users'
 
@@ -49,11 +51,8 @@ class DataExtractor:
                 response = requests.get(store_url, headers=self.api_header)
                 response.raise_for_status()
                 store_data = response.json()
-                print(store_data)
                 data_dict = pd.DataFrame(store_data, index=[store_number])
-                print(data_dict)
                 all_stores_data.append(data_dict)
-                print(data_dict)
                 
             except requests.RequestException as e:
                 print(f"Error retrieving data for store {store_number}: {e}")
@@ -65,17 +64,43 @@ class DataExtractor:
             return store_dataframe
         else:
             return pd.DataFrame()
+        
+    def extract_from_s3(self, s3_address):
+        if not isinstance(s3_address, str):
+            raise ValueError("s3_address must be a string containing the S3 URI")
+    
+        try:
+            # Boto3 code that may raise exceptions
+            s3 = boto3.client('s3')
+            uri = str(s3_address)
+            uri_split = uri.split('/')
+            bucket = uri_split[2]
+            key = '/'.join(uri_split[3:])
+            file = f'tables & csv/{key}'
+            s3.download_file(Bucket=bucket, Key=key, Filename=file)
+            print("*** Data Downloaded ***")
+            dataframe = pd.read_csv(file)
+            print("--- DataFrame Extracted ---")
+            
+            # Process the response or perform other operations
+            return dataframe
+
+        except NoCredentialsError:
+            print("AWS credentials not found. Please configure your credentials.")
+
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'NoSuchBucket':
+                print("The specified bucket does not exist.")
+            else:
+                print("An error occurred:", e)
 
 
             
 
 # if __name__ == '__main__':
-#     no_stores = DataExtractor()
-#     # no_stores.list_number_of_stores()    
-#     data = no_stores.retrieve_stores_data()  
-    
-#     data.to_csv('stores_data.csv')
-        
+#     test = DataExtractor()
+#     df = test.extract_from_s3("s3://data-handling-public/products.csv")
+#     print(df)
         
         
        

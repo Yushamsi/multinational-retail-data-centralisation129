@@ -35,4 +35,5 @@ class DatabaseConnector:
     
     def upload_to_db(self, pandas_dataframe, upload_table_name, engine): 
         pandas_dataframe.to_sql(upload_table_name, engine, if_exists='replace')
+        print(f'Uploaded dataframe as {upload_table_name}')
     
