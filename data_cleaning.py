@@ -1,7 +1,8 @@
-import data_extraction
-import yaml
-import database_utils
 import pandas as pd
+import yaml
+
+import database_utils
+import data_extraction
 
 
 class DataCleaning:
@@ -281,8 +282,16 @@ class DataCleaning:
         print(f"\nDataFrame after removing corrupted rows (indices {corrupted_indices}):\n", df.head())
 
         return df
-        
     
+    def clean_orders_data(self, order_df):
+        # Display info about the DataFrame
+        print('\nInfo: \n')
+        order_df.info()
+        
+        columns_to_remove = ['first_name', 'last_name', '1', 'level_0']
+        order_df.drop(columns=['first_name', 'last_name', '1', 'level_0'], inplace=True)
+        print(f"\nRemoved {columns_to_remove}:\n")
+        return order_df
         
         
         
