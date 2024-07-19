@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import yaml
 
@@ -9,9 +10,10 @@ class DataCleaning:
     def __init__(self) -> None:
         pass
         
-    def clean_user_data(self, user_df):
-        print(user_df)
-    
+    def clean_user_data(self, user_df): # specific to legacy_users
+        print('Setting Index')
+        user_df.set_index('index', inplace=True)
+        
         print('Info: \n', user_df.info())
         # Check for missing values
         print("Missing values in each column:\n", user_df.isnull().sum())
@@ -44,9 +46,6 @@ class DataCleaning:
                 except Exception as e:
                     print(f"Error converting '{column}' to datetime: {e}")
         
-        # Print data types of each column
-        print("\nData types of each column before cleaning:\n", user_df.dtypes)
-        
         # Remove rows with all null values
         user_df.dropna(how='all', inplace=True)
         
@@ -58,9 +57,15 @@ class DataCleaning:
                 user_df[column].fillna(user_df[column].mode()[0], inplace=True)
             else:
                 user_df[column].fillna(user_df[column].mode()[0], inplace=True)
+                
+        # Remove specific corrupted rows
+        corrupted_indices = [11381, 1047, 2997, 8398, 12197, 5309, 10224, 10373, 752, 14523, 9026, 14124, 3539, 13135, 6246, 12197, ]
+        
+        user_df.drop(index=[indexs for indexs in corrupted_indices if indexs in user_df.index], inplace=True)
+        print(f"\nRemoved corrupted rows (indices {corrupted_indices}):\n")
         
         # Check for missing values after cleaning
-        print("Missing values in each column after cleaning:\n", user_df.isnull().sum())
+        print("\nMissing values in each column after cleaning:\n", user_df.isnull().sum())
         
         # Print data types of each column after cleaning
         print("\nData types of each column after cleaning:\n", user_df.dtypes)
@@ -133,8 +138,8 @@ class DataCleaning:
         return card
             
     def clean_store_data(self, df):
-        # Display the initial DataFrame
-        print("Initial DataFrame:\n", df.head())
+        df.set_index('index', inplace=True)
+        df.drop(columns=['Unnamed: 0', 'lat'], inplace=True)
         
         # Display info about the DataFrame
         print('\nInfo: \n')
@@ -154,6 +159,11 @@ class DataCleaning:
         df.dropna(thresh=threshold, inplace=True)
         print(f"\nDataFrame after removing rows with more than {threshold} null values:\n", df.head())
         
+        # Remove specific corrupted rows
+        corrupted_indices = [172, 447, 231, 63, 414, 381, 333] 
+        df.drop(index=[indexs for indexs in corrupted_indices if indexs in df.index], inplace=True)
+        print(f"\nRemoved corrupted rows (indices {corrupted_indices}):\n")
+        
         # Step 2: Identify and convert data types
         for column in df.columns:
             if 'date' in column.lower() or 'time' in column.lower():
@@ -169,10 +179,6 @@ class DataCleaning:
                 else:
                     df[column] = df[column].astype('string')
                     print(f"Ensured '{column}' is treated as string.")
-        
-        # Set 'index' column as the DataFrame index and drop the original index column
-        df.set_index('index', inplace=True)
-        df.index.name = None  # Remove the name of the index
         
         # Step 3: Fill missing values
         for column in df.columns:

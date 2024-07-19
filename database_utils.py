@@ -4,39 +4,6 @@ import pandas as pd
 import psycopg2
 import yaml
 
-# class DatabaseConnector:
-#     def __init__(self):
-#         pass
-    
-#     def read_db_creds(self, yaml_file):
-#         with open(yaml_file, 'r') as stream:
-#             data_loaded = yaml.safe_load(stream)
-#             return data_loaded
-    
-#     def init_db_engine(self, yaml_file):
-#         credentials = self.read_db_creds(yaml_file)
-#         print(credentials)
-#         DATABASE_TYPE = 'postgresql'
-#         DBAPI = 'psycopg2'
-#         HOST = credentials['HOST']
-#         USER = credentials['USER']
-#         PASSWORD = credentials['PASSWORD']
-#         DATABASE = credentials['DATABASE']
-#         PORT = credentials['PORT']
-#         engine = create_engine(f"{DATABASE_TYPE}+{DBAPI}://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}")
-#         engine = engine.connect()
-#         return engine
-        
-#     def list_db_tables(self, engine):
-#         inspector = inspect(engine)
-#         tables_list = inspector.get_table_names()
-#         print('\nTables List: ', tables_list , '\n')
-#         return tables_list
-    
-#     def upload_to_db(self, pandas_dataframe, upload_table_name, engine): 
-        pandas_dataframe.to_sql(upload_table_name, engine, if_exists='replace')
-        print(f'Uploaded dataframe as {upload_table_name}')
-    
 class DatabaseConnector:
     """
     A class to handle database connections and operations.
@@ -62,7 +29,7 @@ class DatabaseConnector:
             data_loaded = yaml.safe_load(stream)
             return data_loaded
     
-    def init_db_engine(self, yaml_file: str) -> "engine":
+    def init_db_engine(self, yaml_file: str):
         """
         Initializes the database engine using credentials from a specified YAML file.
 
@@ -85,7 +52,7 @@ class DatabaseConnector:
         engine = engine.connect()
         return engine
         
-    def list_db_tables(self, engine: Engine) -> list:
+    def list_db_tables(self, engine) -> list:
         """
         Lists all the tables in the connected database.
 
@@ -100,7 +67,7 @@ class DatabaseConnector:
         print('\nTables List: ', tables_list, '\n')
         return tables_list
     
-    def upload_to_db(self, pandas_dataframe: DataFrame, upload_table_name: str, engine: Engine) -> None:
+    def upload_to_db(self, pandas_dataframe, upload_table_name: str, engine) -> None:
         """
         Uploads a pandas DataFrame to a specified table in the database.
 
