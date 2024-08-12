@@ -1,6 +1,9 @@
+import re
+
 import numpy as np
 import pandas as pd
 import yaml
+from pprint import pprint
 
 import database_utils
 import data_extraction
@@ -23,6 +26,14 @@ class DataCleaning:
         print("\nData types of each column:\n", user_df.dtypes)
         # Get a statistical summary of the DataFrame
         print("\nDescription of the DataFrame:\n", user_df.describe(include='all'))
+        
+        # Remove rows with all null values
+        user_df.dropna(how='all', inplace=True)
+        
+        user_df['country_code'] = user_df['country_code'].astype(str).replace('GGB', 'GB')
+        
+        country_code_values=["GB", "DE", "US"]
+        user_df =  user_df[user_df["country_code"].isin(country_code_values)]
 
         # Check for incorrect data types (optional step, assuming we expect certain types)
         for column in user_df.columns:
@@ -46,9 +57,6 @@ class DataCleaning:
                 except Exception as e:
                     print(f"Error converting '{column}' to datetime: {e}")
         
-        # Remove rows with all null values
-        user_df.dropna(how='all', inplace=True)
-        
         # Filling missing values based on data type
         for column in user_df.columns:
             if user_df[column].dtype in ['int64', 'float64']:
@@ -57,12 +65,6 @@ class DataCleaning:
                 user_df[column].fillna(user_df[column].mode()[0], inplace=True)
             else:
                 user_df[column].fillna(user_df[column].mode()[0], inplace=True)
-                
-        # Remove specific corrupted rows
-        corrupted_indices = [11381, 1047, 2997, 8398, 12197, 5309, 10224, 10373, 752, 14523, 9026, 14124, 3539, 13135, 6246, 12197, ]
-        
-        user_df.drop(index=[indexs for indexs in corrupted_indices if indexs in user_df.index], inplace=True)
-        print(f"\nRemoved corrupted rows (indices {corrupted_indices}):\n")
         
         # Check for missing values after cleaning
         print("\nMissing values in each column after cleaning:\n", user_df.isnull().sum())
@@ -72,8 +74,6 @@ class DataCleaning:
         return user_df
         
     def clean_card_data(self, card):
-        print(card)
-        
         print('Info: \n')
         card.info()
         
@@ -85,50 +85,20 @@ class DataCleaning:
         print("\nData types of each column:\n", card.dtypes)
         # Get a statistical summary of the DataFrame
         print("\nDescription of the DataFrame:\n", card.describe(include='all'))
-
-        # Define expected data types for each column
-        expected_types = {
-            'card_number': 'integer',
-            'expiry_date': 'datetime',
-            'card_provider': 'string',
-            'date_payment_confirmed': 'datetime'
-        }
-
-        # Convert card_number to integers
-        card['card_number'] = pd.to_numeric(card['card_number'], errors='coerce').astype('Int64')
-        print(f"Converted 'card_number' to integer.")
-
-        # Convert expiry_date and date_payment_confirmed to datetime
-        card['expiry_date'] = pd.to_datetime(card['expiry_date'], errors='coerce')
-        print(f"Converted 'expiry_date' to datetime.")
         
-        card['date_payment_confirmed'] = pd.to_datetime(card['date_payment_confirmed'], errors='coerce')
-        print(f"Converted 'date_payment_confirmed' to datetime.")
+        card_provider_values=['Diners Club / Carte Blanche', 'American Express', 'JCB 16 digit',
+       'JCB 15 digit', 'Maestro', 'Mastercard', 'Discover',
+       'VISA 19 digit', 'VISA 16 digit', 'VISA 13 digit']
 
-        # Ensure card_provider is treated as string
-        card['card_provider'] = card['card_provider'].astype('string')
-        print(f"Ensured 'card_provider' is treated as string.")
-
-        # Print data types of each column before cleaning
-        print("\nData types of each column before cleaning:\n", card.dtypes)
+        card =  card[card["card_provider"].isin(card_provider_values)]
         
         # Remove rows with all null values
         card.dropna(how='all', inplace=True)
+                    
+        card = card.drop_duplicates()
         
-        # Filling missing values based on data type
-        for column, expected_type in expected_types.items():
-            if expected_type == 'integer':
-                card[column].fillna(card[column].mean(), inplace=True)
-            elif expected_type == 'datetime':
-                if not card[column].mode().empty:
-                    card[column].fillna(card[column].mode()[0], inplace=True)
-                else:
-                    card[column].fillna(pd.Timestamp('1900-01-01'), inplace=True)
-            elif expected_type == 'string':
-                if not card[column].mode().empty:
-                    card[column].fillna(card[column].mode()[0], inplace=True)
-                else:
-                    card[column].fillna('Unknown', inplace=True)
+        card['card_number'] = card['card_number'].astype(str).str.replace('?', '', regex=False)
+
         
         # Check for missing values after cleaning
         print("\nMissing values in each column after cleaning:\n", card.isnull().sum())
@@ -139,8 +109,7 @@ class DataCleaning:
             
     def clean_store_data(self, df):
         df.set_index('index', inplace=True)
-        df.drop(columns=['Unnamed: 0', 'lat'], inplace=True)
-        
+
         # Display info about the DataFrame
         print('\nInfo: \n')
         df.info()
@@ -154,17 +123,23 @@ class DataCleaning:
         # Get a statistical summary of the DataFrame
         print("\nDescription of the DataFrame:\n", df.describe(include='all'))
         
-        # Step 1: Remove rows where the majority of values are null
+        df.drop(columns=['lat'], inplace=True)
+        
+        df['continent'] = df['continent'].astype(str).replace('eeEurope', 'Europe')
+        df['continent'] = df['continent'].astype(str).replace('eeAmerica', 'America')
+        
+        continent_values=['Europe', 'America']
+        df = df[df["continent"].isin(continent_values)]
+        df.continent.unique()
+        
+        df['staff_numbers'] = df['staff_numbers'].apply(lambda x: re.sub(r'[a-zA-Z]', '', x))
+        
+        # Remove rows where the majority of values are null
         threshold = len(df.columns) / 2
         df.dropna(thresh=threshold, inplace=True)
         print(f"\nDataFrame after removing rows with more than {threshold} null values:\n", df.head())
         
-        # Remove specific corrupted rows
-        corrupted_indices = [172, 447, 231, 63, 414, 381, 333] 
-        df.drop(index=[indexs for indexs in corrupted_indices if indexs in df.index], inplace=True)
-        print(f"\nRemoved corrupted rows (indices {corrupted_indices}):\n")
-        
-        # Step 2: Identify and convert data types
+        # Identify and convert data types
         for column in df.columns:
             if 'date' in column.lower() or 'time' in column.lower():
                 try:
@@ -180,7 +155,7 @@ class DataCleaning:
                     df[column] = df[column].astype('string')
                     print(f"Ensured '{column}' is treated as string.")
         
-        # Step 3: Fill missing values
+        # Fill missing values
         for column in df.columns:
             if df[column].dtype in ['int64', 'float64']:
                 df[column].fillna(df[column].mean(), inplace=True)
@@ -272,21 +247,20 @@ class DataCleaning:
         print("\nData types of each column:\n", df.dtypes)
         # Get a statistical summary of the DataFrame
         print("\nDescription of the DataFrame:\n", df.describe(include='all'))
+        
+        removed_values=['Still_avaliable', 'Removed']
+        df = df[df["removed"].isin(removed_values)]
+        df.removed.unique()
 
-        # Step 1: Remove rows where the majority of values are null
+        # Remove rows where the majority of values are null
         threshold = len(df.columns) / 2
         df.dropna(thresh=threshold, inplace=True)
         print(f"\nDataFrame after removing rows with more than {threshold} null values:\n", df.head())
 
-        # Step 2: Drop the unnamed column if it exists
+        # Drop the unnamed column if it exists
         df.drop(columns=[col for col in df.columns if 'unnamed' in col.lower()], errors='ignore', inplace=True)
         print("\nDataFrame after removing 'Unnamed' columns:\n", df.head())
-
-        # Step 3: Remove specific corrupted rows
-        corrupted_indices = [751, 1400, 1133]
-        df.drop(index=corrupted_indices, errors='ignore', inplace=True)
-        print(f"\nDataFrame after removing corrupted rows (indices {corrupted_indices}):\n", df.head())
-
+        
         return df
     
     def clean_orders_data(self, order_df):
@@ -298,7 +272,11 @@ class DataCleaning:
         order_df.drop(columns=['first_name', 'last_name', '1', 'level_0'], inplace=True)
         print(f"\nRemoved {columns_to_remove}:\n")
         return order_df
-        
+    
+    def clean_date_data(self, date_data):
+        values=['Evening', 'Morning', 'Midday', 'Late_Hours']
+        date_data = date_data[date_data['time_period'].isin(values)]
+        return date_data
         
         
 if __name__ == '__main__':
